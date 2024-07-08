@@ -10,8 +10,17 @@ Ne fonctionne que pour une seule figure à la fois pour le moment.
 ## Visuals
 
 ## Installation
-Copier tous les fichiers dans un répertoire graphique placé dans le répertoire de travail.
-Ensuite indiquer dès que nécessaire :
+
+Dans le dossier principal, lancer la commande :
+
+`python setup.py bdist_wheel`
+
+Le fichier wheel d'installation est dans le dossier "dist" nouvellement créé.
+Pour installer la librairie dans l'environnement local:
+
+`pip install /path/to/wheelfile.whl`
+
+Ensuite la bibliothèque peut être utilisée comme n'importe quelle autre :
 `import graphiques as g`
 
 ## Usage
