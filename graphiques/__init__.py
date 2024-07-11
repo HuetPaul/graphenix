@@ -867,77 +867,79 @@ Pour aller plus loin : affichage de plusieurs graphiques n un :
         if y is None:
             y = np.copy(x)
             x = np.arange(0, len(y))
-        if (len(np.shape(np.array(x))) == 2 and len(np.shape(np.array(y))) == 2 and
-                np.shape(np.array(x))[1] == np.shape(np.array(y))[1]):
-            for (X, Y) in zip(x, y):
+        if type(x) is list:
+            x = np.array(x)
+        if type(y) is list:
+            y = np.array(y)
+
+        if (len(x.shape) == 2 and len(y.shape) == 2 and
+                x.shape[1] == y.shape[1]):
+            for (X, Y, i) in zip(x, y, np.arange(len(x))):
                 self.lignes_x.append(X)
                 self.lignes_y.append(Y)
                 self.err_y.append([])
-                self.fig: Figure = None
-                args_auxi: list[dict] = [{} for XX in X]
+                args_auxi: dict = {}
                 for k in args.keys():
-                    if type(args[k]) is list | np.ndarray and len(args[k]) == len(X):
-                        for i in range(len(X)):
-                            args_auxi[i][k] = args[k][i]
+                    if (isinstance(args[k], list) | isinstance(args[k], np.ndarray)) and len(args[k]) == len(y):
+                        args_auxi[k] = args[k][i]
                     else:
-                        for i in range(len(X)):
-                            args_auxi[i][k] = args[k]
+                        args_auxi[k] = args[k]
                 if marker != "" and not ("linestyle" in args_auxi):
-                    for i in range(len(X)):
-                        args_auxi[i]["linestyle"] = ""
-                        args_auxi[i]["marker"] = marker
+                    args_auxi["linestyle"] = ""
+                    if ((isinstance(marker, list) | isinstance(marker, np.ndarray))
+                            and len(marker) == len(y)):
+                        args_auxi["marker"] = marker[i]
+                    else:
+                        args_auxi["marker"] = marker
                 elif marker != "":
-                    for i in range(len(X)):
-                        args_auxi[i]["marker"] = marker
+                    if ((isinstance(marker, list) | isinstance(marker, np.ndarray))
+                            and len(marker) == len(y)):
+                        args_auxi["marker"] = marker[i]
+                    else:
+                        args_auxi["marker"] = marker
                 if "color" not in args:
-                    for i in range(len(X)):
-                        # args_auxi[i]["color"] = 'C' + str((len(self.lignes_x)  + i) % 10)
-                        args_auxi[i]["color"] = l_couleurs[(
-                            len(self.lignes_x) + i - 1) % len(l_couleurs)]
-                if "label" in args and args["label"] == "":
-                    for i in range(len(X)):
-                        del args_auxi[i]["label"]
+                    args_auxi["color"] = l_couleurs[i % len(l_couleurs)]
+                if "label" in args and args_auxi["label"] == "":
+                    del args_auxi["label"]
                     # supprime les légendes vides
                     # (évite l'affichage d'un message d'erreur et d'un cadre gris vide à la place de la légende)
-                self.param_lignes.extend(args_auxi)
-        elif len(np.shape(np.array(y))) == 2 and np.shape(np.array(y))[1] == len(x):
-            for Y in y:
+                self.param_lignes.append(args_auxi)
+        elif len(y.shape) == 2 and y.shape[1] == len(x):
+            for (Y, i) in zip(y, np.arange(len(y))):
                 self.lignes_x.append(x)
                 self.lignes_y.append(Y)
                 self.err_y.append([])
-                self.err_y.append([])
-                args_auxi: list[dict] = [{} for X in x]
+                args_auxi: dict = {}
                 for k in args.keys():
-                    if type(args[k]) is list | np.ndarray and len(args[k]) == len(x):
-                        for i in range(len(x)):
-                            args_auxi[i][k] = args[k][i]
+                    if (isinstance(args[k], list) | isinstance(args[k], np.ndarray)) and len(args[k]) == len(y):
+                        args_auxi[k] = args[k][i]
                     else:
-                        for i in range(len(x)):
-                            args_auxi[i][k] = args[k]
+                        args_auxi[k] = args[k]
                 if marker != "" and not ("linestyle" in args_auxi):
-                    for i in range(len(x)):
-                        args_auxi[i]["linestyle"] = ""
-                        args_auxi[i]["marker"] = marker
+                    args_auxi["linestyle"] = ""
+                    if ((isinstance(marker, list) | isinstance(marker, np.ndarray))
+                            and len(marker) == len(y)):
+                        args_auxi["marker"] = marker[i]
+                    else:
+                        args_auxi["marker"] = marker
                 elif marker != "":
-                    for i in range(len(x)):
-                        args_auxi[i]["marker"] = marker
+                    if ((isinstance(marker, list) | isinstance(marker, np.ndarray))
+                            and len(marker) == len(y)):
+                        args_auxi["marker"] = marker[i]
+                    else:
+                        args_auxi["marker"] = marker
                 if "color" not in args:
-                    for i in range(len(x)):
-                        # args_auxi[i]["color"] = 'C' + str((len(self.lignes_x) + i) % 10)
-                        args_auxi[i]["color"] = l_couleurs[(
-                            len(self.lignes_x) + i - 1) % len(l_couleurs)]
-                if "label" in args and args["label"] == "":
-                    for i in range(len(x)):
-                        del args_auxi[i]["label"]
+                    args_auxi["color"] = l_couleurs[i % len(l_couleurs)]
+                if "label" in args and args_auxi["label"] == "":
+                    del args_auxi["label"]
                     # supprime les légendes vides
                     # (évite l'affichage d'un message d'erreur et d'un cadre gris vide à la place de la légende)
-                self.param_lignes.extend(args_auxi)
+                self.param_lignes.append(args_auxi)
         elif len(y) != len(x):
             raise (ValueError(
                 "Attention : pour l'ajout d'une ligne dans un Graphique, la liste des ordonnées doit être "
                 "de la même taille que la liste des abscisses : x : "
-                + str(len(x)) + " y : " + str(np.shape(np.array(y)))
-                + str(len(np.shape(y))) + str(np.shape(np.array(y)))[1]))
+                + str(x.shape) + " y : " + str(y.shape)))
         else:
             self.lignes_x.append(x)
             self.lignes_y.append(y)
