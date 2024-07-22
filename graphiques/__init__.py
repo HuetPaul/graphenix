@@ -867,16 +867,46 @@ Pour aller plus loin : affichage de plusieurs graphiques n un :
         if y is None:
             y = np.copy(x)
             x = np.arange(0, len(y))
-        if type(x) is list:
-            x = np.array(x)
-        if type(y) is list:
-            y = np.array(y)
+        if isinstance(x[0], list) | isinstance(x[0], np.ndarray):
+            if isinstance(x[0][0], list) | isinstance(x[0][0], np.ndarray):
+                raise UserWarning("Graphique.ligne la dimension de l'axe des abscisse ne peut pas être supérieur à 2")
+            else:
+                dim_x: int = 2
+        else:
+            dim_x: int = 1
+        if isinstance(x[0], list) | isinstance(x[0], np.ndarray):
+            if isinstance(x[0][0], list) | isinstance(x[0][0], np.ndarray):
+                raise UserWarning("Graphique.ligne la dimension du tableau des abscisse ne peut pas être supérieur à 2")
+            else:
+                dim_x: int = 2
+        else:
+            dim_x: int = 1
+        if isinstance(y[0], list) | isinstance(y[0], np.ndarray):
+            if isinstance(y[0][0], list) | isinstance(y[0][0], np.ndarray):
+                raise UserWarning("Graphique.ligne la dimension du tableau des ordonnées ne peut pas être supérieur à 2")
+            else:
+                dim_y: int = 2
+        else:
+            dim_y: int = 1
+        if (dim_x == 2 and dim_y == 2 and
+                np.any(np.array([len(X) != len(Y) for (X, Y) in zip(x, y)]))):
+            raise UserWarning("Graphique.ligne : les tailles des tableaux des abscisses "
+                              "ne correspondent pas aux tailles des tableux des ordonnées : ",
+                              [(len(X), len(Y)) for (X, Y) in zip(x, y)])
+        elif (dim_y == 2 and dim_x == 1 and
+                np.any(np.array([len(x) != len(Y) for Y in y]))):
+            raise UserWarning("Graphique.ligne : les tailles du tableau des abscisses "
+                              "ne correspondent pas aux tailles des tableaux des ordonnées : ",
+                              [(len(x), len(Y)) for Y in y])
+        # if type(x) is list:
+        #     x = np.array(x)
+        # if type(y) is list:
+        #     y = np.array(y)
 
-        if (len(x.shape) == 2 and len(y.shape) == 2 and
-                x.shape[1] == y.shape[1]):
+        if dim_x == 2 and dim_y == 2:
             for (X, Y, i) in zip(x, y, np.arange(len(x))):
-                self.lignes_x.append(X)
-                self.lignes_y.append(Y)
+                self.lignes_x.append(np.array(X))
+                self.lignes_y.append(np.array(Y))
                 self.err_y.append([])
                 args_auxi: dict = {}
                 for k in args.keys():
@@ -904,10 +934,10 @@ Pour aller plus loin : affichage de plusieurs graphiques n un :
                     # supprime les légendes vides
                     # (évite l'affichage d'un message d'erreur et d'un cadre gris vide à la place de la légende)
                 self.param_lignes.append(args_auxi)
-        elif len(y.shape) == 2 and y.shape[1] == len(x):
+        elif dim_y == 2:
             for (Y, i) in zip(y, np.arange(len(y))):
-                self.lignes_x.append(x)
-                self.lignes_y.append(Y)
+                self.lignes_x.append(np.array(x))
+                self.lignes_y.append(np.array(Y))
                 self.err_y.append([])
                 args_auxi: dict = {}
                 for k in args.keys():
@@ -939,10 +969,10 @@ Pour aller plus loin : affichage de plusieurs graphiques n un :
             raise (ValueError(
                 "Attention : pour l'ajout d'une ligne dans un Graphique, la liste des ordonnées doit être "
                 "de la même taille que la liste des abscisses : x : "
-                + str(x.shape) + " y : " + str(y.shape)))
+                + str(len(x)) + " y : " + str(len(y))))
         else:
-            self.lignes_x.append(x)
-            self.lignes_y.append(y)
+            self.lignes_x.append(np.array(x))
+            self.lignes_y.append(np.array(y))
             self.err_y.append([])
             if marker != "" and not ("linestyle" in args):
                 args["linestyle"] = ""
