@@ -108,12 +108,11 @@ def lists_to_ndarray(lists_to_convert: list[list], is_scalar: bool = True) -> np
     res: list = []
     for i in range(len(lists_to_convert)):
         li: list = list(lists_to_convert[i])
-        if len(li) < lmax:
-            for j in range(max(0, len(li) - 1), lmax - 1):
-                if is_scalar:
-                    li.append(np.nan)
-                else:
-                    li.append(c)
+        while len(li) < lmax:
+            if is_scalar:
+                li.append(np.nan)
+            else:
+                li.append(c)
         res.append(li)
     return np.array(res)
 
@@ -133,6 +132,298 @@ def ndarray_to_list(tab: np.ndarray, is_scalar: bool = True) -> list[list]:
             liste.append(tab[i, j])
             j += 1
         res.append(np.array(liste))
+    return res
+
+
+def test_list_regular(x: list) -> list | None:
+    """
+    If x is a list of lists, this function test if there size is equals.
+    If there are, then it returns a list of string of the same dimensions of x.
+    Then x could be turned into a ndarray and turned back after
+    :param x: the list to be tested
+    :return: the type list or None
+    """
+    res: list = []
+    dim: int = -1 # size of the sub list (-1 for scalars or strings)
+    if len(x) == 0:
+        return []
+    elif isinstance(res[0], list | np.ndarray):
+        dim = len(res[0])
+    for X in x:
+        if isinstance(X, str | float | int) and dim > -1:
+            return None
+        elif isinstance(X, list | np.ndarray) and len(X) != dim:
+            return None
+        if isinstance(X, str):
+            res.append("str")
+        elif isinstance(X, np.float64):
+            res.append("double")
+        elif isinstance(X, float):
+            res.append("float")
+        elif isinstance(X, int):
+            res.append("int")
+        elif isinstance(X, np.ndarray):
+            res.append("array")
+        elif isinstance(X, list):
+            types: list | None = test_list_regular(X)
+            if types is None:
+                return None
+            else:
+                res.append(types)
+        else:
+            raise UserWarning("test_list_regular : the type ", type(X), "cannot be saved")
+    return x
+
+
+def get_regular_list(x: np.ndarray, types: np.ndarray) -> list:
+    """
+    Recover the original list converted by test_list_regular (if the list is regular (the result is not None))
+    :param x: the converted array
+    :param types: the types of each list's element  (result of 'test_list_regular')
+    :return: the original list
+    """
+    res: list = []
+    for (X, T) in zip(x, types):
+        if isinstance(X, list):
+            res.append(get_regular_list(X, T))
+        elif T == "str":
+            res.append(str(X))
+        elif T == "double":
+            res.append(np.double(X))
+        elif T == "float":
+            res.append(float(X))
+        elif T == "int":
+            res.append(int(X))
+        elif T == "array":
+            res.append(X)
+        else:
+            raise UserWarning("get_regular_list : the type ", T, "cannot be loaded")
+    return res
+
+
+def list_to_dict(x: list, separator: str = "_") -> dict:
+    """
+    x is an irregular list (containing list of different sizes)
+    return a dictionary adapted to be saved with np.saved_compressed
+    :param x: the list to be converted
+    :param separator: The string to be added between dictionary's keys if there are recursives
+    :return: the dictionary containing the list
+    """
+    res: dict = dict()
+    types: list[[str, str]] = []
+    for i in range(len(x)):
+        if isinstance(x[i], str):
+            res[separator + str(i)] = x[i]
+            types.append([separator + str(i), "str"])
+        elif isinstance(x[i], np.float64):
+            res[separator + str(i)] = x[i]
+            types.append([separator + str(i), "double"])
+        elif isinstance(x[i], float):
+            res[separator + str(i)] = x[i]
+            types.append([separator + str(i), "float"])
+        elif isinstance(x[i], int):
+            res[separator + str(i)] = x[i]
+            types.append([separator + str(i), "int"])
+        elif isinstance(x[i], np.ndarray):
+            res[separator + str(i)] = x[i]
+            types.append([separator + str(i), "array"])
+        elif isinstance(x[i], list):
+            loc_types: list | None = test_list_regular(x[i])
+            if loc_types is not None:
+                res[separator + str(i)] = np.array(x[i])
+                types.append([separator + str(i), "list_regular"])
+                res[separator + str(i) + separator + "types"] = np.array(loc_types)
+                types.append([separator + str(i) + separator + "types", "types"])
+            else:
+                loc_dic: dict = list_to_dict(x[i], separator=separator)
+                types.append([separator + str(i), "list_irregular"])
+                for lk in loc_dic.keys():
+                    res[separator + str(i) + separator + lk] = loc_dic[lk]
+                    types.append([separator + str(i) + separator + lk, "list_irregular_values"])
+        elif isinstance(x[i], dict):
+            loc_dic: dict = dict_to_ndarray_dict(x[i], separator=separator)
+            types.append([separator + str(i), "dict"])
+            for lk in loc_dic.keys():
+                res[separator + str(i) + separator + lk] = loc_dic[lk]
+                types.append([separator + str(i) + separator + lk, "dict_values"])
+        else:
+            raise UserWarning("list_to_dict : the type ", type(x[i]), "cannot be saved")
+    res[separator + "types"] = types
+    return res
+
+
+def dict_to_ndarray_dict(dic: dict, separator: str = "_") -> dict:
+    """
+    Turne a dictionary containing list, ndarray, str, float, int or even others dic into a dic in the
+    right form to be saved by np.save_compressed
+    :param dic: The dictionary to be trensformed
+    :param separator: The string to be added between dictionary's keys if there are recursives
+    :return: the new dictionary
+    """
+    res: dict = dict()
+    types: list[[str, str]] = []
+    keys: list[str] = []
+
+    for k in dic.keys():
+        if "k" == "types":
+            raise UserWarning("""dict_to_ndarray_dict : the key "types" cannot be saved, 
+            please replace it with another one""")
+        if isinstance(dic[k], str):
+            res[k] = dic[k]
+            types.append([k,"str"])
+            keys.append(k)
+        if isinstance(dic[k], int):
+            res[k] = dic[k]
+            types.append([k,"int"])
+            keys.append(k)
+        if isinstance(dic[k], np.float64):
+            res[k] = dic[k]
+            types.append([k,"double"])
+            keys.append(k)
+        if isinstance(dic[k], float):
+            res[k] = dic[k]
+            types.append([k,"float"])
+            keys.append(k)
+        if isinstance(dic[k], np.ndarray):
+            res[k] = dic[k]
+            types.append([k,"array"])
+            keys.append(k)
+        if isinstance(dic[k], list):
+            loc_types: list | None = test_list_regular(dic[k])
+            if loc_types is not None:
+                res[k] = np.array(dic[k])
+                types.append([k, "list_regular"])
+                res[k + separator + "types"] = np.array(loc_types)
+                types.append([k + separator + "types", "types"])
+            else:
+                loc_dic: dict = list_to_dict(dic[k], separator=separator)
+                types.append([k, "list_irregular"])
+                for lk in loc_dic.keys():
+                    res[k + separator + lk] = loc_dic[lk]
+                    types.append([k + separator + lk, "list_irregular_values"])
+        elif isinstance(dic[k], dict):
+            loc_dic: dict = dict_to_ndarray_dict(dic[k], separator=separator)
+            types.append([k, "dict"])
+            for lk in loc_dic.keys():
+                res[k + separator + lk] = loc_dic[lk]
+                types.append([k + separator + lk, "dict_values"])
+        else:
+            raise UserWarning("dict_to_ndarray_dic : the type ", type(dic[k]), "cannot be saved")
+    res["types"] = types
+    return res
+
+
+def dict_to_list(dic: dict, separator: str = "_") -> list:
+    """
+    Return the irregular list transformed by the list_to_doct function
+    :param dic: the dic to be converted
+    :param separator: The string to be added between dictionary's keys if there are recursives
+    :return: the original list
+    """
+    if "_types" not in dic.keys():
+        raise UserWarning("dic_to_list, the given dictionary doesn't contain the required _types key."
+                          "Either this dict is not the result of list_to_dict either it has been modified")
+    types: np.ndarray = dic[separator + "types"]
+    keys: list[str] = dic.keys()
+    keys.sort()
+    res: list = []
+    i: int = 0
+    while i < len(keys):
+        k: str = keys[i]
+        if k == separator + "types" or separator in k[len(separator):]:
+            i += 1
+        else:   # this is an original element of the list
+            type_i = types[np.argwhere(types[:, 0] == k)[0, 0]][1]
+
+            if type_i == "str":
+                res.append(str(dic[k]))
+                i += 1   
+            elif type_i == "double":
+                res.append(np.double(dic[k]))
+                i += 1
+            elif type_i == "float":
+                res.append(float(dic[k]))
+                i += 1
+            elif type_i == "int":
+                res.append(int(dic[k]))
+                i += 1
+            elif type_i == "array":
+                res.append(dic[k])
+                i += 1
+            elif type_i == "list_regular":
+                res.append(get_regular_list(dic[k], dic[k + separator + "type_is"]))
+                i += 2
+            elif type_i == "list_irregular":
+                loc_dic: dict = dict()
+                i += 1
+                while k in keys[i]:
+                    loc_dic[keys[i][len(k):]] = dic[k]
+                res.append(dict_to_list(loc_dic, separator=separator))
+            elif type_i == "dict":
+                loc_dic: dict = dict()
+                i += 1
+                while k in keys[i]:
+                    loc_dic[keys[i][len(k):]] = dic[k]
+                res.append(ndarray_dict_to_dict(loc_dic, separator=separator))
+            else:
+                raise UserWarning("dict_list : the type ", type, "cannot be loaded")
+    return res
+
+
+def ndarray_dict_to_dict(dic: dict, separator: str = "_") -> list:
+    """
+    Return the ioriginal dictionary get from the dict_to_ndarray_dict
+    :param dic: the dic to be converted
+    :param separator: The string to be added between dictionary's keys if there are recursives
+    :return: the original list
+    """
+    if "_types" not in dic.keys():
+        raise UserWarning("dic_to_list, the given dictionary doesn't contain the required _types key."
+                          "Either this dict is not the result of list_to_dict either it has been modified")
+    types: np.ndarray = dic[separator + "types"]
+    keys: list[str] = dic.keys()
+    keys.sort()
+    res: list = []
+    i: int = 0
+    while i < len(keys):
+        k: str = keys[i]
+        if k == separator + "types" or separator in k[len(separator):]:
+            i += 1
+        else:   # this is an original element of the list
+            type_i = types[np.argwhere(types[:, 0] == k)[0, 0]][1]
+
+            if type_i == "str":
+                res.append(str(dic[k]))
+                i += 1
+            elif type_i == "double":
+                res.append(np.double(dic[k]))
+                i += 1
+            elif type_i == "float":
+                res.append(float(dic[k]))
+                i += 1
+            elif type_i == "int":
+                res.append(int(dic[k]))
+                i += 1
+            elif type_i == "array":
+                res.append(dic[k])
+                i += 1
+            elif type_i == "list_regular":
+                res.append(get_regular_list(dic[k], dic[k + separator + "type_is"]))
+                i += 2
+            elif type_i == "list_irregular":
+                loc_dic: dict = dict()
+                i += 1
+                while k in keys[i]:
+                    loc_dic[keys[i][len(k):]] = dic[k]
+                res.append(dict_to_list(loc_dic, separator=separator))
+            elif type_i == "dict":
+                loc_dic: dict = dict()
+                i += 1
+                while k in keys[i]:
+                    loc_dic[keys[i][len(k):]] = dic[k]
+                res.append(ndarray_dict_to_dict(loc_dic, separator=separator))
+            else:
+                raise UserWarning("dict_list : the type ", type, "cannot be loaded")
     return res
 
 
@@ -230,6 +521,7 @@ To go further: display several graphs in one :
         self.param_ax: dict = dict()
         self.colorbar: list[Colorbar] = None
         self.param_colorbar: list[dict] = [dict()]
+        self.ticks_colorbar: list[np.ndarray | list] = [[]]
         # Contains additional parameters for the colorbars ex : label="legende"...
         # The first one is automatically associated with the image
         self.custum_colorbar_colors: list[list] = None
@@ -341,6 +633,9 @@ To go further: display several graphs in one :
                                     param_colorbar[i][j])
                             except ValueError:
                                 self.param_colorbar[i][names_param_colorbar[i][j]] = param_colorbar[i][j]
+
+            if "ticks_colorbar" in values_to_load:
+                self.ticks_colorbar = ndarray_to_list(values_to_load["ticks_colorbar"], is_scalar=True)
             if "custum_colorbar_colors" in values_to_load:
                 self.custum_colorbar_colors = ndarray_to_list(values_to_load["custum_colorbar_colors"], is_scalar=False)
             if "custum_colorbar_values" in values_to_load:
@@ -600,11 +895,12 @@ To go further: display several graphs in one :
                                 self.param_polygons[i][name_param_polygons[i][j]] = param_polygons[i][j]
             values_to_load.close()
 
-    def save(self, filename: str = "graph_without_name") -> None:
+    def save(self, filename: str = "graph_without_name", directory: str = None) -> None:
         """
         Save the Graphique in self.directory (default the current working directory) in npz compress
         format.
-        :param filename: The name of the .npz file (default : "graph_without_name")
+        :param filename: The name of the .npz file (default: "graph_without_name")
+        :param directory: Graphique's directory (default self.directory (default : the curent working directory))
         :return: None
         """
         if filename != "graph_without_name":
@@ -612,6 +908,8 @@ To go further: display several graphs in one :
                 self.filename = filename[:-4]
             else:
                 self.filename = filename
+        if directory is not None:
+            self.directory = directory
         enrg: dict = dict()  # Dictionary containing all the necessary information :
         # Used like :  np.savez_compressed(name_fichier,**enrg)
         
@@ -628,6 +926,8 @@ To go further: display several graphs in one :
             enrg["param_colorbar"] = lists_to_ndarray(param_colorbar, is_scalar=False)
             enrg["name_param_colorbar"] = lists_to_ndarray(
                 name_param_colorbar, is_scalar=False)
+        if len(self.ticks_colorbar) > 0:
+            enrg["ticks_colorbar"] = lists_to_ndarray(self.ticks_colorbar, is_scalar=True)
 
         if self.custum_colorbar_colors is not None:
             enrg["custum_colorbar_colors"] = lists_to_ndarray(self.custum_colorbar_colors,
@@ -802,20 +1102,30 @@ To go further: display several graphs in one :
             enrg["name_param_polygons"] = lists_to_ndarray(
                 name_param_polygons, is_scalar=False)
         if ".npz" not in self.filename:
-            np.savez_compressed(self.directory + "/" +
-                                self.filename + ".npz", **enrg)
+            if self.directory[-1] == "/":
+                np.savez_compressed(self.directory +
+                                    self.filename + ".npz", **enrg)
+            else:
+                np.savez_compressed(self.directory + "/" +
+                                    self.filename + ".npz", **enrg)
         else:
-            np.savez_compressed(self.directory + "/" +
-                                self.filename, **enrg)
+            if self.directory[-1] == "/":
+                np.savez_compressed(self.directory +
+                                    self.filename, **enrg)
+            else:
+                np.savez_compressed(self.directory + "/" +
+                                    self.filename, **enrg)
 
     def customized_cmap(self, values: list[np.float_] | np.ndarray | tuple,
                         colors: list | np.ndarray | tuple | None = None,
+                        ticks: list | np.ndarray[np.float_] | None= None,
                         **kwargs) -> None:
         """
         Build a customized discrete colorbar
         :param values: The values of the colormap's color intervals if len(values)==2, the interval is automatically
             defined as a linear subdivision of the interval between values[0] and values[1] of size 255
         :param colors: The associated colors, if None, a linear variation beteween C1 and C2 is bild
+        :param ticks: Array of ticks for the colorbar If None, ticks are determined automatically from the input.
         :param kwargs: Additionals arguments for the colorbar
         :return: None
         """
@@ -840,6 +1150,10 @@ To go further: display several graphs in one :
             self.custum_colorbar_colors.append(colors)
         else:
             self.custum_colorbar_colors = [colors]
+        if ticks is None:
+            self.ticks_colorbar.append([])
+        else:
+            self.ticks_colorbar.append(ticks)
         self.param_colorbar.append(kwargs)
 
     def line(self, x: np.ndarray | list, y: np.ndarray | list = None,
@@ -1990,19 +2304,25 @@ function : a user-defined function which takes a 1D array of values, and outputs
                 dico[K] = L
         self.param_font.update(dico)
 
-    def config_colorbar(self, index_colorbar: int = ii_max, **dico) -> None:
+    def config_colorbar(self, index_colorbar: int = ii_max, ticks: list | np.ndarray | None = None,
+                        **dico) -> None:
         """
         Colorbar additianal parameter
         :param index_colorbar:
             The index of the colorbar (default the parameters are added for all colorbars)
             0 is the index of the image's colorbar
+        :param ticks: The colorbar's ticks. If None, ticks are determined automatically from the input.
         :param dico: the parameter dictionary
         :return:
         """
         if index_colorbar == ii_max:
             for d in self.param_colorbar:
                 d.update(dico)
+            if ticks is not None:
+                self.ticks_colorbar = [ticks for t in self.ticks_colorbar]
         else:
+            if ticks is not None:
+                self.ticks_colorbar[index_colorbar] = ticks
             self.param_colorbar[index_colorbar].update(dico)
 
     def fond_noir(self) -> None:
@@ -2040,8 +2360,11 @@ function : a user-defined function which takes a 1D array of values, and outputs
             for i in range(len(self.custum_colorbar_colors)):
                 cmap = mpl.colors.ListedColormap(self.custum_colorbar_colors[i])
                 norm = mpl.colors.BoundaryNorm(self.custum_colorbar_values[i], cmap.N)
+                params: dict = self.param_colorbar[i + 1].copy()
+                if len(self.ticks_colorbar[i + 1]) > 0:
+                    params["ticks"] = self.ticks_colorbar[i + 1]
                 self.colorbar = self.fig.colorbar(mpl.cm.ScalarMappable(cmap=cmap, norm=norm),
-                                                  **self.param_colorbar[i + 1])
+                                                  **params)
 
     def projection_lines(self) -> None:
         # Affiche les lines sur l'axe
@@ -2201,6 +2524,8 @@ function : a user-defined function which takes a 1D array of values, and outputs
                                    self.y_axe_image, self.array_image[:, :, 2],
                                    cmap="Blues", **param_tableau)
             params_cb: dict = self.param_colorbar[0].copy()
+            if len(self.ticks_colorbar[0]) > 0:
+                params_cb["ticks"] = self.ticks_colorbar[0]
             if 'scale' in params_cb.keys():
                 del params_cb['scale']
 

@@ -108,12 +108,11 @@ def lists_to_ndarray(lists_to_convert: list[list], is_scalar: bool = True) -> np
     res: list = []
     for i in range(len(lists_to_convert)):
         li: list = list(lists_to_convert[i])
-        if len(li) < lmax:
-            for j in range(max(0, len(li) - 1), lmax - 1):
-                if is_scalar:
-                    li.append(np.nan)
-                else:
-                    li.append(c)
+        while len(li) < lmax:
+            if is_scalar:
+                li.append(np.nan)
+            else:
+                li.append(c)
         res.append(li)
     return np.array(res)
 
@@ -230,6 +229,7 @@ To go further: display several graphs in one :
         self.param_ax: dict = dict()
         self.colorbar: list[Colorbar] = None
         self.param_colorbar: list[dict] = [dict()]
+        self.ticks_colorbar: list[np.ndarray | list] = [[]]
         # Contains additional parameters for the colorbars ex : label="legende"...
         # The first one is automatically associated with the image
         self.custum_colorbar_colors: list[list] = None
@@ -341,6 +341,9 @@ To go further: display several graphs in one :
                                     param_colorbar[i][j])
                             except ValueError:
                                 self.param_colorbar[i][names_param_colorbar[i][j]] = param_colorbar[i][j]
+
+            if "ticks_colorbar" in values_to_load:
+                self.ticks_colorbar = ndarray_to_list(values_to_load["ticks_colorbar"], is_scalar=True)
             if "custum_colorbar_colors" in values_to_load:
                 self.custum_colorbar_colors = ndarray_to_list(values_to_load["custum_colorbar_colors"], is_scalar=False)
             if "custum_colorbar_values" in values_to_load:
@@ -600,11 +603,12 @@ To go further: display several graphs in one :
                                 self.param_polygons[i][name_param_polygons[i][j]] = param_polygons[i][j]
             values_to_load.close()
 
-    def save(self, filename: str = "graph_without_name") -> None:
+    def save(self, filename: str = "graph_without_name", directory: str = None) -> None:
         """
         Save the Graphique in self.directory (default the current working directory) in npz compress
         format.
-        :param filename: The name of the .npz file (default : "graph_without_name")
+        :param filename: The name of the .npz file (default: "graph_without_name")
+        :param directory: Graphique's directory (default self.directory (default : the curent working directory))
         :return: None
         """
         if filename != "graph_without_name":
@@ -612,6 +616,8 @@ To go further: display several graphs in one :
                 self.filename = filename[:-4]
             else:
                 self.filename = filename
+        if directory is not None:
+            self.directory = directory
         enrg: dict = dict()  # Dictionary containing all the necessary information :
         # Used like :  np.savez_compressed(name_fichier,**enrg)
         
@@ -628,6 +634,8 @@ To go further: display several graphs in one :
             enrg["param_colorbar"] = lists_to_ndarray(param_colorbar, is_scalar=False)
             enrg["name_param_colorbar"] = lists_to_ndarray(
                 name_param_colorbar, is_scalar=False)
+        if len(self.ticks_colorbar) > 0:
+            enrg["ticks_colorbar"] = lists_to_ndarray(self.ticks_colorbar, is_scalar=True)
 
         if self.custum_colorbar_colors is not None:
             enrg["custum_colorbar_colors"] = lists_to_ndarray(self.custum_colorbar_colors,
@@ -802,20 +810,30 @@ To go further: display several graphs in one :
             enrg["name_param_polygons"] = lists_to_ndarray(
                 name_param_polygons, is_scalar=False)
         if ".npz" not in self.filename:
-            np.savez_compressed(self.directory + "/" +
-                                self.filename + ".npz", **enrg)
+            if self.directory[-1] == "/":
+                np.savez_compressed(self.directory +
+                                    self.filename + ".npz", **enrg)
+            else:
+                np.savez_compressed(self.directory + "/" +
+                                    self.filename + ".npz", **enrg)
         else:
-            np.savez_compressed(self.directory + "/" +
-                                self.filename, **enrg)
+            if self.directory[-1] == "/":
+                np.savez_compressed(self.directory +
+                                    self.filename, **enrg)
+            else:
+                np.savez_compressed(self.directory + "/" +
+                                    self.filename, **enrg)
 
     def customized_cmap(self, values: list[np.float_] | np.ndarray | tuple,
                         colors: list | np.ndarray | tuple | None = None,
+                        ticks: list | np.ndarray[np.float_] | None= None,
                         **kwargs) -> None:
         """
         Build a customized discrete colorbar
         :param values: The values of the colormap's color intervals if len(values)==2, the interval is automatically
             defined as a linear subdivision of the interval between values[0] and values[1] of size 255
         :param colors: The associated colors, if None, a linear variation beteween C1 and C2 is bild
+        :param ticks: Array of ticks for the colorbar If None, ticks are determined automatically from the input.
         :param kwargs: Additionals arguments for the colorbar
         :return: None
         """
@@ -840,6 +858,10 @@ To go further: display several graphs in one :
             self.custum_colorbar_colors.append(colors)
         else:
             self.custum_colorbar_colors = [colors]
+        if ticks is None:
+            self.ticks_colorbar.append([])
+        else:
+            self.ticks_colorbar.append(ticks)
         self.param_colorbar.append(kwargs)
 
     def line(self, x: np.ndarray | list, y: np.ndarray | list = None,
@@ -1990,19 +2012,25 @@ function : a user-defined function which takes a 1D array of values, and outputs
                 dico[K] = L
         self.param_font.update(dico)
 
-    def config_colorbar(self, index_colorbar: int = ii_max, **dico) -> None:
+    def config_colorbar(self, index_colorbar: int = ii_max, ticks: list | np.ndarray | None = None,
+                        **dico) -> None:
         """
         Colorbar additianal parameter
         :param index_colorbar:
             The index of the colorbar (default the parameters are added for all colorbars)
             0 is the index of the image's colorbar
+        :param ticks: The colorbar's ticks. If None, ticks are determined automatically from the input.
         :param dico: the parameter dictionary
         :return:
         """
         if index_colorbar == ii_max:
             for d in self.param_colorbar:
                 d.update(dico)
+            if ticks is not None:
+                self.ticks_colorbar = [ticks for t in self.ticks_colorbar]
         else:
+            if ticks is not None:
+                self.ticks_colorbar[index_colorbar] = ticks
             self.param_colorbar[index_colorbar].update(dico)
 
     def fond_noir(self) -> None:
@@ -2040,8 +2068,11 @@ function : a user-defined function which takes a 1D array of values, and outputs
             for i in range(len(self.custum_colorbar_colors)):
                 cmap = mpl.colors.ListedColormap(self.custum_colorbar_colors[i])
                 norm = mpl.colors.BoundaryNorm(self.custum_colorbar_values[i], cmap.N)
+                params: dict = self.param_colorbar[i + 1].copy()
+                if len(self.ticks_colorbar[i + 1]) > 0:
+                    params["ticks"] = self.ticks_colorbar[i + 1]
                 self.colorbar = self.fig.colorbar(mpl.cm.ScalarMappable(cmap=cmap, norm=norm),
-                                                  **self.param_colorbar[i + 1])
+                                                  **params)
 
     def projection_lines(self) -> None:
         # Affiche les lines sur l'axe
@@ -2201,6 +2232,8 @@ function : a user-defined function which takes a 1D array of values, and outputs
                                    self.y_axe_image, self.array_image[:, :, 2],
                                    cmap="Blues", **param_tableau)
             params_cb: dict = self.param_colorbar[0].copy()
+            if len(self.ticks_colorbar[0]) > 0:
+                params_cb["ticks"] = self.ticks_colorbar[0]
             if 'scale' in params_cb.keys():
                 del params_cb['scale']
 
