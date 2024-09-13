@@ -144,11 +144,11 @@ def test_list_regular(x: list) -> list | None:
     :return: the type list or None
     """
     res: list = []
-    dim: int = -1 # size of the sub list (-1 for scalars or strings)
+    dim: int = -1  # size of the sub list (-1 for scalars or strings)
     if len(x) == 0:
         return []
-    elif isinstance(res[0], list | np.ndarray):
-        dim = len(res[0])
+    elif isinstance(x[0], list | np.ndarray):
+        dim = len(x[0])
     for X in x:
         if isinstance(X, str | float | int) and dim > -1:
             return None
@@ -170,9 +170,11 @@ def test_list_regular(x: list) -> list | None:
                 return None
             else:
                 res.append(types)
+        elif isinstance(X, dict):
+            return None
         else:
             raise UserWarning("test_list_regular : the type ", type(X), "cannot be saved")
-    return x
+    return res
 
 
 def get_regular_list(x: np.ndarray, types: np.ndarray) -> list:
@@ -186,6 +188,8 @@ def get_regular_list(x: np.ndarray, types: np.ndarray) -> list:
     for (X, T) in zip(x, types):
         if isinstance(X, list):
             res.append(get_regular_list(X, T))
+        if isinstance(X, np.ndarray) and len(X) == 0:
+            res.append([])
         elif T == "str":
             res.append(str(X))
         elif T == "double":
@@ -201,7 +205,7 @@ def get_regular_list(x: np.ndarray, types: np.ndarray) -> list:
     return res
 
 
-def list_to_dict(x: list, separator: str = "_") -> dict:
+def list_to_dict(x: list, separator: str = "-.-") -> dict:
     """
     x is an irregular list (containing list of different sizes)
     return a dictionary adapted to be saved with np.saved_compressed
@@ -213,46 +217,50 @@ def list_to_dict(x: list, separator: str = "_") -> dict:
     types: list[[str, str]] = []
     for i in range(len(x)):
         if isinstance(x[i], str):
-            res[separator + str(i)] = x[i]
-            types.append([separator + str(i), "str"])
+            res[str(i)] = x[i]
+            types.append([str(i), "str"])
         elif isinstance(x[i], np.float64):
-            res[separator + str(i)] = x[i]
-            types.append([separator + str(i), "double"])
+            res[str(i)] = x[i]
+            types.append([str(i), "double"])
         elif isinstance(x[i], float):
-            res[separator + str(i)] = x[i]
-            types.append([separator + str(i), "float"])
+            res[str(i)] = x[i]
+            types.append([str(i), "float"])
         elif isinstance(x[i], int):
-            res[separator + str(i)] = x[i]
-            types.append([separator + str(i), "int"])
+            res[str(i)] = x[i]
+            types.append([str(i), "int"])
         elif isinstance(x[i], np.ndarray):
-            res[separator + str(i)] = x[i]
-            types.append([separator + str(i), "array"])
+            res[str(i)] = x[i]
+            types.append([str(i), "array"])
         elif isinstance(x[i], list):
             loc_types: list | None = test_list_regular(x[i])
             if loc_types is not None:
-                res[separator + str(i)] = np.array(x[i])
-                types.append([separator + str(i), "list_regular"])
-                res[separator + str(i) + separator + "types"] = np.array(loc_types)
-                types.append([separator + str(i) + separator + "types", "types"])
+                res[str(i)] = np.array(x[i])
+                types.append([str(i), "list_regular"])
+                res[str(i) + separator + "types"] = np.array(loc_types)
+                types.append([str(i) + separator + "types", "types"])
             else:
                 loc_dic: dict = list_to_dict(x[i], separator=separator)
-                types.append([separator + str(i), "list_irregular"])
+                types.append([str(i), "list_irregular"])
+                res[str(i)] = str(i)
                 for lk in loc_dic.keys():
-                    res[separator + str(i) + separator + lk] = loc_dic[lk]
-                    types.append([separator + str(i) + separator + lk, "list_irregular_values"])
+                    res[str(i) + separator + lk] = loc_dic[lk]
+                    types.append([str(i) + separator + lk, "list_irregular_values"])
         elif isinstance(x[i], dict):
             loc_dic: dict = dict_to_ndarray_dict(x[i], separator=separator)
-            types.append([separator + str(i), "dict"])
+            types.append([str(i), "dict"])
+            res[str(i)] = str(i)
             for lk in loc_dic.keys():
-                res[separator + str(i) + separator + lk] = loc_dic[lk]
-                types.append([separator + str(i) + separator + lk, "dict_values"])
+                res[str(i) + separator + lk] = loc_dic[lk]
+                types.append([str(i) + separator + lk, "dict_values"])
         else:
             raise UserWarning("list_to_dict : the type ", type(x[i]), "cannot be saved")
-    res[separator + "types"] = types
+    res["types"] = types
+    res["separator"] = separator
+    
     return res
 
 
-def dict_to_ndarray_dict(dic: dict, separator: str = "_") -> dict:
+def dict_to_ndarray_dict(dic: dict, separator: str = "-.-") -> dict:
     """
     Turne a dictionary containing list, ndarray, str, float, int or even others dic into a dic in the
     right form to be saved by np.save_compressed
@@ -270,25 +278,25 @@ def dict_to_ndarray_dict(dic: dict, separator: str = "_") -> dict:
             please replace it with another one""")
         if isinstance(dic[k], str):
             res[k] = dic[k]
-            types.append([k,"str"])
+            types.append([k, "str"])
             keys.append(k)
-        if isinstance(dic[k], int):
+        elif isinstance(dic[k], int):
             res[k] = dic[k]
-            types.append([k,"int"])
+            types.append([k, "int"])
             keys.append(k)
-        if isinstance(dic[k], np.float64):
+        elif isinstance(dic[k], np.float64):
             res[k] = dic[k]
-            types.append([k,"double"])
+            types.append([k, "double"])
             keys.append(k)
-        if isinstance(dic[k], float):
+        elif isinstance(dic[k], float):
             res[k] = dic[k]
-            types.append([k,"float"])
+            types.append([k, "float"])
             keys.append(k)
-        if isinstance(dic[k], np.ndarray):
+        elif isinstance(dic[k], np.ndarray):
             res[k] = dic[k]
-            types.append([k,"array"])
+            types.append([k, "array"])
             keys.append(k)
-        if isinstance(dic[k], list):
+        elif isinstance(dic[k], list):
             loc_types: list | None = test_list_regular(dic[k])
             if loc_types is not None:
                 res[k] = np.array(dic[k])
@@ -298,39 +306,46 @@ def dict_to_ndarray_dict(dic: dict, separator: str = "_") -> dict:
             else:
                 loc_dic: dict = list_to_dict(dic[k], separator=separator)
                 types.append([k, "list_irregular"])
+                res[k] = k
                 for lk in loc_dic.keys():
                     res[k + separator + lk] = loc_dic[lk]
                     types.append([k + separator + lk, "list_irregular_values"])
         elif isinstance(dic[k], dict):
             loc_dic: dict = dict_to_ndarray_dict(dic[k], separator=separator)
             types.append([k, "dict"])
+            res[k] = k
             for lk in loc_dic.keys():
                 res[k + separator + lk] = loc_dic[lk]
                 types.append([k + separator + lk, "dict_values"])
         else:
             raise UserWarning("dict_to_ndarray_dic : the type ", type(dic[k]), "cannot be saved")
     res["types"] = types
+    res["separator"] = separator
     return res
 
 
-def dict_to_list(dic: dict, separator: str = "_") -> list:
+def dict_to_list(dic: dict) -> list:
     """
     Return the irregular list transformed by the list_to_doct function
     :param dic: the dic to be converted
     :param separator: The string to be added between dictionary's keys if there are recursives
     :return: the original list
     """
-    if "_types" not in dic.keys():
-        raise UserWarning("dic_to_list, the given dictionary doesn't contain the required _types key."
-                          "Either this dict is not the result of list_to_dict either it has been modified")
-    types: np.ndarray = dic[separator + "types"]
-    keys: list[str] = dic.keys()
+        
+    keys: list[str] = list(dic.keys())
     keys.sort()
+    if "separator" not in dic.keys():
+        raise UserWarning("dic_to_list, the given dictionary doesn't contain the required separator key."
+                          "Either this dict is not the result of list_to_dict either it has been modified",
+                          keys)
+
+    separator: str = str(dic["separator"])
+    types = dic["types"]
     res: list = []
     i: int = 0
     while i < len(keys):
         k: str = keys[i]
-        if k == separator + "types" or separator in k[len(separator):]:
+        if k == "types" or k == "separator":
             i += 1
         else:   # this is an original element of the list
             type_i = types[np.argwhere(types[:, 0] == k)[0, 0]][1]
@@ -348,82 +363,90 @@ def dict_to_list(dic: dict, separator: str = "_") -> list:
                 res.append(int(dic[k]))
                 i += 1
             elif type_i == "array":
-                res.append(dic[k])
+                res.append(np.array(dic[k]))
                 i += 1
             elif type_i == "list_regular":
-                res.append(get_regular_list(dic[k], dic[k + separator + "type_is"]))
+                res.append(get_regular_list(dic[k], dic[k + separator + "types"]))
                 i += 2
             elif type_i == "list_irregular":
                 loc_dic: dict = dict()
                 i += 1
-                while k in keys[i]:
-                    loc_dic[keys[i][len(k):]] = dic[k]
-                res.append(dict_to_list(loc_dic, separator=separator))
+                while k + separator in keys[i]:
+                    loc_dic[keys[i][len(k) + len(separator):]] = dic[keys[i]]
+                    i += 1
+                res.append(dict_to_list(loc_dic))
             elif type_i == "dict":
                 loc_dic: dict = dict()
                 i += 1
-                while k in keys[i]:
-                    loc_dic[keys[i][len(k):]] = dic[k]
-                res.append(ndarray_dict_to_dict(loc_dic, separator=separator))
+                while k + separator in keys[i]:
+                    loc_dic[keys[i][len(k) + len(separator):]] = dic[keys[i]]
+                    i += 1
+                res.append(ndarray_dict_to_dict(loc_dic))
             else:
-                raise UserWarning("dict_list : the type ", type, "cannot be loaded")
+                raise UserWarning("dict_list : the type ", type_i, "cannot be loaded", k)
     return res
 
 
-def ndarray_dict_to_dict(dic: dict, separator: str = "_") -> list:
+def ndarray_dict_to_dict(dic: dict) -> dict:
     """
     Return the ioriginal dictionary get from the dict_to_ndarray_dict
     :param dic: the dic to be converted
-    :param separator: The string to be added between dictionary's keys if there are recursives
     :return: the original list
     """
-    if "_types" not in dic.keys():
-        raise UserWarning("dic_to_list, the given dictionary doesn't contain the required _types key."
+    if "separator" not in dic.keys():
+        raise UserWarning("dic_to_list, the given dictionary doesn't contain the required separator key."
                           "Either this dict is not the result of list_to_dict either it has been modified")
-    types: np.ndarray = dic[separator + "types"]
-    keys: list[str] = dic.keys()
+
+    separator: str = str(dic["separator"])
+    if "types" not in dic.keys():
+        raise UserWarning("dic_to_list, the given dictionary doesn't contain the required _types key."
+                          "Either this dict is not the result of list_to_dict either it has been modified",
+                          dic.keys())
+    types: np.ndarray = dic["types"]
+    keys: list[str] = list(dic.keys())
     keys.sort()
-    res: list = []
+    res: dict = dict()
     i: int = 0
     while i < len(keys):
         k: str = keys[i]
-        if k == separator + "types" or separator in k[len(separator):]:
+        if k == "types" or k == "separator":
             i += 1
         else:   # this is an original element of the list
             type_i = types[np.argwhere(types[:, 0] == k)[0, 0]][1]
-
             if type_i == "str":
-                res.append(str(dic[k]))
+                res[k] = str(dic[k])
                 i += 1
             elif type_i == "double":
-                res.append(np.double(dic[k]))
+                res[k] = np.double(dic[k])
                 i += 1
             elif type_i == "float":
-                res.append(float(dic[k]))
+                res[k] = float(dic[k])
                 i += 1
             elif type_i == "int":
-                res.append(int(dic[k]))
+                res[k] = int(dic[k])
                 i += 1
             elif type_i == "array":
-                res.append(dic[k])
+                res[k] = np.array(dic[k])
                 i += 1
             elif type_i == "list_regular":
-                res.append(get_regular_list(dic[k], dic[k + separator + "type_is"]))
+                res[k] = get_regular_list(dic[k], dic[k + separator + "types"])
                 i += 2
             elif type_i == "list_irregular":
                 loc_dic: dict = dict()
                 i += 1
-                while k in keys[i]:
-                    loc_dic[keys[i][len(k):]] = dic[k]
-                res.append(dict_to_list(loc_dic, separator=separator))
+                while k + separator in keys[i]:
+                    loc_dic[keys[i][len(k) + len(separator):]] = dic[keys[i]]
+                    i += 1
+                res[k] = dict_to_list(loc_dic)
             elif type_i == "dict":
                 loc_dic: dict = dict()
                 i += 1
-                while k in keys[i]:
-                    loc_dic[keys[i][len(k):]] = dic[k]
-                res.append(ndarray_dict_to_dict(loc_dic, separator=separator))
+                while k + separator in keys[i]:
+                    loc_dic[keys[i][len(k) + len(separator):]] = dic[keys[i]]
+                    i += 1
+                res[k] = ndarray_dict_to_dict(loc_dic)
             else:
-                raise UserWarning("dict_list : the type ", type, "cannot be loaded")
+                raise UserWarning("dict_list : the type ", type_i, "cannot be loaded")
     return res
 
 
@@ -596,7 +619,9 @@ To go further: display several graphs in one :
         self.param_polygons: list = []  # Parameters for the polygons plotting
         self.grid: bool = False  # If True add a background grid via plt.grid()
         if filename != "":
-            values_to_load: np.lib.npyio.NpzFile = np.load(filename + ".npz")
+            values_files: np.lib.npyio.NpzFile = np.load(directory + filename + ".npz")
+            values_to_load: dict = ndarray_dict_to_dict(dict(values_files))
+            values_files.close()
             self.filename = filename
             if directory != "":
                 self.directory = directory
@@ -609,291 +634,94 @@ To go further: display several graphs in one :
                 self.filename = filename[i:]
             else:
                 self.directory = "./"
-            if "ext" in values_to_load:
-                self.ext = str(values_to_load["ext"])
+            if "ext" in values_to_load.keys():
+                self.ext = values_to_load["ext"]
             self.ax = None
             self.param_ax = dict()
-            if 'style' in values_to_load:
-                self.style = str(values_to_load["style"])
-            if "param_colorbar" in values_to_load:
-                param_colorbar = ndarray_to_list(
-                    values_to_load["param_colorbar"], is_scalar=False)
-                names_param_colorbar = ndarray_to_list(
-                    values_to_load["name_param_colorbar"], is_scalar=False)
-                for i in range(len(param_colorbar)):
-                    self.param_colorbar.append(dict())
-                    for j in range(len(param_colorbar[i])):
-                        self.param_colorbar[i][names_param_colorbar[i][j]] = param_colorbar[i][j]
-                        try:
-                            self.param_colorbar[i][names_param_colorbar[i][j]] = float(
-                                param_colorbar[i][j])
-                        except ValueError:
-                            try:
-                                self.param_colorbar[i][names_param_colorbar[i][j]] = str(
-                                    param_colorbar[i][j])
-                            except ValueError:
-                                self.param_colorbar[i][names_param_colorbar[i][j]] = param_colorbar[i][j]
+            if 'style' in values_to_load.keys():
+                self.style = values_to_load["style"]
+            if "param_colorbar" in values_to_load.keys():
+                self.param_colorbar = values_to_load["param_colorbar"]
 
-            if "ticks_colorbar" in values_to_load:
-                self.ticks_colorbar = ndarray_to_list(values_to_load["ticks_colorbar"], is_scalar=True)
-            if "custum_colorbar_colors" in values_to_load:
-                self.custum_colorbar_colors = ndarray_to_list(values_to_load["custum_colorbar_colors"], is_scalar=False)
-            if "custum_colorbar_values" in values_to_load:
-                self.custum_colorbar_values = ndarray_to_list(values_to_load["custum_colorbar_values"], is_scalar=True)
+            if "ticks_colorbar" in values_to_load.keys():
+                self.ticks_colorbar = values_to_load["ticks_colorbar"]
+            if "custum_colorbar_colors" in values_to_load.keys():
+                self.custum_colorbar_colors = values_to_load["custum_colorbar_colors"]
+            if "custum_colorbar_values" in values_to_load.keys():
+                self.custum_colorbar_values = values_to_load["custum_colorbar_values"]
 
-            if "param_labels_contours" in values_to_load:
-                if len(values_to_load["name_param_labels_contours"].shape) != 1:
-                    print("error during the reading of labels_contours parameters")
-                for i in range(len(values_to_load["name_param_labels_contours"])):
-                    self.param_labels_contours[values_to_load["name_param_labels_contours"][i]] = (
-                        values_to_load)["param_labels_contours"][i]
-                    try:
-                        self.param_labels_contours[values_to_load["name_param_labels_contours"][i]] = float(
-                            values_to_load["param_labels_contours"][i])
-                    except ValueError:
-                        try:
-                            self.param_labels_contours[values_to_load["name_param_labels_contours"][i]] = str(
-                                values_to_load["param_labels_contours"][i])
-                        except ValueError:
-                            self.param_labels_contours[values_to_load["name_param_labels_contours"][i]] =\
-                                values_to_load["param_labels_contours"][i]
-            if "color_label_contours" in values_to_load:
+            if "param_labels_contours" in values_to_load.keys():
+                self.param_labels_contours = values_to_load["param_labels_contours"]
+            if "color_label_contours" in values_to_load.keys():
                 self.color_label_contours = values_to_load["color_label_contours"]
-            if "param_font" in values_to_load:
-                if len(values_to_load["name_param_font"].shape) != 1:
-                    print("error during the reading of font parameters")
-                for i in range(len(values_to_load["name_param_font"])):
-                    self.param_font[values_to_load["name_param_font"][i]] = values_to_load["param_font"][i]
-                    try:
-                        self.param_font[values_to_load["name_param_font"][i]] = float(values_to_load["param_font"][i])
-                    except ValueError:
-                        try:
-                            self.param_font[values_to_load["name_param_font"][i]] = str(values_to_load["param_font"][i])
-                        except ValueError:
-                            self.param_font[values_to_load["name_param_font"][i]] = (
-                                values_to_load)["param_font"][i]
-            if "param_ax" in values_to_load:
-                if len(values_to_load["name_param_ax"].shape) != 1:
-                    print("error during the reading of ax parameters")
-                for i in range(len(values_to_load["name_param_ax"])):
-                    self.param_ax[values_to_load["name_param_ax"][i]] = values_to_load["param_ax"][i]
-                    try:
-                        self.param_ax[values_to_load["name_param_ax"][i]] = float(values_to_load["param_ax"][i])
-                    except ValueError:
-                        try:
-                            self.param_ax[values_to_load["name_param_ax"][i]] = str(values_to_load["param_ax"][i])
-                        except ValueError:
-                            self.param_ax[values_to_load["name_param_ax"][i]] = values_to_load["param_ax"][i]
+            if "param_font" in values_to_load.keys():
+                self.param_font = values_to_load["param_font"]
+            if "param_ax" in values_to_load.keys():
+                self.param_ax = values_to_load["param_ax"]
             self.colorbar = None
-            if "param_fig" in values_to_load:
-                if len(values_to_load["name_param_fig"].shape) != 1:
-                    print("error during the reading of Figure parameters")
-                for i in range(len(values_to_load["name_param_fig"])):
-                    self.param_fig[values_to_load["name_param_fig"][i]] = values_to_load["param_fig"][i]
-                    try:
-                        self.param_fig[values_to_load["name_param_fig"][i]] = float(values_to_load["param_fig"][i])
-                    except ValueError:
-                        try:
-                            self.param_fig[values_to_load["name_param_fig"][i]] = str(
-                                values_to_load["param_fig"][i])
-                        except ValueError:
-                            self.param_fig[values_to_load["name_param_fig"][i]] = values_to_load["param_fig"][i]
-            if "param_enrg_fig" in values_to_load:
-                if len(values_to_load["name_param_enrg_fig"].shape) != 1:
-                    print("error during the reading of Figure saving parameters")
-                for i in range(len(values_to_load["name_param_enrg_fig"])):
-                    self.param_enrg_fig[values_to_load["name_param_enrg_fig"][i]] = values_to_load["param_enrg_fig"][i]
-                    try:
-                        self.param_enrg_fig[values_to_load["name_param_enrg_fig"][i]] = float(
-                            values_to_load["param_enrg_fig"][i])
-                    except ValueError:
-                        try:
-                            self.param_enrg_fig[values_to_load["name_param_enrg_fig"][i]] = str(
-                                values_to_load["param_enrg_fig"][i])
-                        except ValueError:
-                            self.param_enrg_fig[values_to_load["name_param_enrg_fig"][i]] =\
-                                values_to_load["param_enrg_fig"][i]
-            if "x_axe" in values_to_load:
+            if "param_fig" in values_to_load.keys():
+                self.param_fig = values_to_load["param_fig"]
+            if "param_enrg_fig" in values_to_load.keys():
+                self.param_enrg_fig = values_to_load["param_enrg_fig"]
+            if "x_axe" in values_to_load.keys():
                 self.x_axe = values_to_load["x_axe"]
-            if "labels_x_ticks" in values_to_load:
+            if "labels_x_ticks" in values_to_load.keys():
                 self.labels_x_ticks = values_to_load["labels_x_ticks"]
-            if "y_axe" in values_to_load:
+            if "y_axe" in values_to_load.keys():
                 self.y_axe = values_to_load["y_axe"]
-            if "labels_y_ticks" in values_to_load:
+            if "labels_y_ticks" in values_to_load.keys():
                 self.labels_y_ticks = values_to_load["labels_y_ticks"]
-            if "lines_x" in values_to_load:
-                self.lines_x = ndarray_to_list(values_to_load["lines_x"], is_scalar=True)
-            if "lines_y" in values_to_load:
-                self.lines_y = ndarray_to_list(values_to_load["lines_y"], is_scalar=True)
-            if "lines_t_x" in values_to_load:
-                self.lines_t_x = ndarray_to_list(
-                    values_to_load["lines_t_x"], is_scalar=True)
-            if "lines_t_y" in values_to_load:
-                self.lines_t_y = ndarray_to_list(
-                    values_to_load["lines_t_y"], is_scalar=True)
-            if "lines_t_s" in values_to_load:
-                self.lines_t_s = ndarray_to_list(
-                    values_to_load["lines_t_s"], is_scalar=False)
-            if "err_y" in values_to_load:
-                self.err_y = ndarray_to_list(values_to_load["err_y"], is_scalar=True)
+            if "lines_x" in values_to_load.keys():
+                self.lines_x = values_to_load["lines_x"]
+            if "lines_y" in values_to_load.keys():
+                self.lines_y = values_to_load["lines_y"]
+            if "lines_t_x" in values_to_load.keys():
+                self.lines_t_x = values_to_load["lines_t_x"]
+            if "lines_t_y" in values_to_load.keys():
+                self.lines_t_y = values_to_load["lines_t_y"]
+            if "lines_t_s" in values_to_load.keys():
+                self.lines_t_s =values_to_load["lines_t_s"]
+            if "err_y" in values_to_load.keys():
+                self.err_y = values_to_load["err_y"]
                 
             self.param_lines = []
-            if "param_lines" in values_to_load:
-                param_lines = ndarray_to_list(
-                    values_to_load["param_lines"], is_scalar=False)
-                names_param_lines = ndarray_to_list(
-                    values_to_load["name_param_lines"], is_scalar=False)
-                for i in range(len(param_lines)):
-                    self.param_lines.append(dict())
-                    for j in range(len(param_lines[i])):
-                        self.param_lines[i][names_param_lines[i][j]] = param_lines[i][j]
-                        try:
-                            self.param_lines[i][names_param_lines[i][j]] = float(
-                                param_lines[i][j])
-                        except ValueError:
-                            try:
-                                self.param_lines[i][names_param_lines[i][j]] = str(
-                                    param_lines[i][j])
-                            except ValueError:
-                                self.param_lines[i][names_param_lines[i][j]] = param_lines[i][j]
-                                
-            self.param_texts = []
-            if "param_texts" in values_to_load:
-                param_texts = ndarray_to_list(
-                    values_to_load["param_texts"], is_scalar=False)
-                names_param_texts = ndarray_to_list(
-                    values_to_load["name_param_texts"], is_scalar=False)
-                for i in range(len(param_texts)):
-                    self.param_texts.append(dict())
-                    for j in range(len(param_texts[i])):
-                        self.param_texts[i][names_param_texts[i][j]] = param_texts[i][j]
-                        try:
-                            self.param_texts[i][names_param_texts[i][j]] = float(
-                                param_texts[i][j])
-                        except ValueError:
-                            try:
-                                self.param_texts[i][names_param_texts[i][j]] = str(
-                                    param_texts[i][j])
-                            except ValueError:
-                                self.param_texts[i][names_param_texts[i][j]] = param_texts[i][j]
-
-            if "bords_histogramme" in values_to_load:
-                self.bords_histogramme = ndarray_to_list(
-                    values_to_load["bords_histogramme"], is_scalar=True)
-            if "vals_histogramme" in values_to_load:
-                self.vals_histogramme = ndarray_to_list(values_to_load["vals_histogramme"],
-                                                        is_scalar=True)
-            self.param_histogrammes = []
-            if "param_histogrammes" in values_to_load:
-                param_histogrammes: list[np.ndarray] = ndarray_to_list(
-                    values_to_load["param_histogrammes"], is_scalar=False)
-                names_param_histogrammes: list[np.ndarray[str]] =\
-                    ndarray_to_list(values_to_load["name_param_histogrammes"], is_scalar=False)
-                for i in range(len(param_histogrammes)):
-                    self.param_histogrammes.append(dict())
-                    for j in range(len(param_histogrammes[i])):
-                        self.param_histogrammes[i][names_param_histogrammes[i][j]] = param_histogrammes[i][j]
-                        try:
-                            self.param_histogrammes[i][names_param_histogrammes[i][j]] = float(
-                                param_histogrammes[i][j])
-                        except ValueError:
-                            try:
-                                self.param_histogrammes[i][names_param_histogrammes[i][j]] = str(
-                                    param_histogrammes[i][j])
-                            except ValueError:
-                                self.param_histogrammes[i][names_param_histogrammes[i][j]] = param_histogrammes[i][j]
-
-            if "param_legende" in values_to_load:
-                for i in range(len(values_to_load["name_param_legende"])):
-                    self.param_legende[values_to_load["name_param_legende"][i]] = values_to_load["param_legende"][i]
-                    try:
-                        self.param_legende[values_to_load["name_param_legende"][i]] = float(
-                            values_to_load["param_legende"][i])
-                    except ValueError:
-                        try:
-                            self.param_legende[values_to_load["name_param_legende"][i]] = str(
-                                values_to_load["param_legende"][i])
-                        except ValueError:
-                            self.param_legende[values_to_load["name_param_legende"][i]] =\
-                                values_to_load["param_legende"][i]
-
-            if "image" in values_to_load:                
-                self.array_image = values_to_load["image"]
-                self.param_image = dict()
-                if len(values_to_load["param_image"].shape) != 1:
-                    print("error during the reading of image parameters")
-                for i in range(len(values_to_load["param_image"])):
-                    self.param_image[values_to_load["name_param_image"][i]] = values_to_load["param_image"][i]
-                    try:
-                        self.param_image[values_to_load["name_param_image"][i]] = float(
-                            values_to_load["param_image"][i])
-                    except ValueError:
-                        try:
-                            self.param_image[values_to_load["name_param_image"][i]] = str(
-                                values_to_load["param_image"][i])
-                        except ValueError:
-                            self.param_image[values_to_load["name_param_image"][i]] = values_to_load["param_image"][i]
+            if "param_lines" in values_to_load.keys():
+                self.param_lines = values_to_load["param_lines"]
+            if "param_texts" in values_to_load.keys():
+                self.param_texts = values_to_load["param_texts"]
+            if "bords_histogramme" in values_to_load.keys():
+                self.bords_histogramme = values_to_load["bords_histogramme"]
+            if "vals_histogramme" in values_to_load.keys():
+                self.vals_histogramme = values_to_load["vals_histogramme"]
+            if "param_histogrammes" in values_to_load.keys():
+                self.param_histogrammes = values_to_load["param_histogrammes"]
+            if "param_legende" in values_to_load.keys():
+                self.param_legende = values_to_load["param_legende"]
+            if "image" in values_to_load.keys():                
+                self.array_image = values_to_load["array_image"]
+                self.param_image = values_to_load["param_image"]
                 self.x_axe_image = values_to_load["x_axe_image"]
-                # liste des coordonnées y de contours
                 self.y_axe_image = values_to_load["y_axe_image"]
-            if "contours" in values_to_load:
+            if "contours" in values_to_load.keys():
                 self.array_contours = values_to_load["contours"] 
                 self.x_axe_contours = values_to_load["x_axe_contours"]
                 self.y_axe_contours = values_to_load["y_axe_contours"]
-            if "param_contours" in values_to_load:
-                self.param_contours = dict()
-                if len(values_to_load["param_contours"].shape) != 1:
-                    print("error during the reading of contours parameters")
-                for i in range(len(values_to_load["param_contours"])):
-                    self.param_contours[values_to_load["name_param_contours"][i]] = values_to_load["param_contours"][i]
-                    try:
-                        self.param_contours[values_to_load["name_param_contours"][i]] = float(
-                            values_to_load["param_contours"][i])
-                    except ValueError:
-                        try:
-                            self.param_contours[values_to_load["name_param_contours"][i]] = str(
-                                values_to_load["param_contours"][i])
-                        except ValueError:
-                            self.param_contours[values_to_load["name_param_contours"][i]] = (
-                                values_to_load)["param_contours"][i]
-
-            if "levels" in values_to_load:
+            if "param_contours" in values_to_load.keys():
+                self.param_contours = values_to_load["param_contours"]
+            if "levels" in values_to_load.keys():
                 self.levels = values_to_load["levels"]
-                if "clabels" in values_to_load:
+                if "clabels" in values_to_load.keys():
                     self.clabels = values_to_load["clabels"]
-                if "clabels_mask" in values_to_load:
+                if "clabels_mask" in values_to_load.keys():
                     self.clabels_mask = values_to_load["clabels_mask"]
-            if "parameters" in values_to_load:
+            if "parameters" in values_to_load.keys():
                 self.title = values_to_load["parameters"][0]
                 self.nb_contours = int(values_to_load["parameters"][1])
                 self.tab_contours_is_image = bool(int(values_to_load["parameters"][2]))
                 self.grid = bool(int(values_to_load["parameters"][3]))
-            if "index_polygons" in values_to_load:
-                ind1 = ndarray_to_list(
-                    values_to_load["index_polygons_1"], is_scalar=True)
-                ind2 = ndarray_to_list(
-                    values_to_load["index_polygons_2"], is_scalar=True)
-                for i in range(len(ind1)):
-                    self.index_polygons.append(
-                        np.array([ind1[i], ind2[i]]).T)
-                param_polygons = ndarray_to_list(
-                    values_to_load["param_polygons"], is_scalar=False)
-                name_param_polygons = ndarray_to_list(
-                    values_to_load["name_param_polygons"], is_scalar=False)
-                for i in range(len(param_polygons)):
-                    self.param_polygons.append(dict())
-                    for j in range(len(param_polygons[i])):
-                        self.param_polygons[i][name_param_polygons[i][j]] = param_polygons[i][j]
-                        try:
-                            self.param_polygons[i][name_param_polygons[i][j]] = float(
-                                param_polygons[i][j])
-                        except ValueError:
-                            try:
-                                self.param_polygons[i][name_param_polygons[i][j]] = str(
-                                    param_polygons[i][j])
-                            except ValueError:
-                                self.param_polygons[i][name_param_polygons[i][j]] = param_polygons[i][j]
-            values_to_load.close()
+            if "index_polygons" in values_to_load.keys():
+                self.index_polygons = values_to_load["index_polygons"]
+                self.param_polygons = values_to_load["param_polygons"]
 
     def save(self, filename: str = "graph_without_name", directory: str = None) -> None:
         """
@@ -916,65 +744,23 @@ To go further: display several graphs in one :
         enrg["ext"] = self.ext
         enrg["style"] = self.style
         if len(self.param_colorbar) > 0:
-            param_colorbar: list = []
-            name_param_colorbar: list[list[str]] = []
-            for i in range(len(self.param_colorbar)):
-                param_colorbar.append([]), name_param_colorbar.append([])
-                for key in self.param_colorbar[i].keys():
-                    param_colorbar[i].append(self.param_colorbar[i][key])
-                    name_param_colorbar[i].append(key)
-            enrg["param_colorbar"] = lists_to_ndarray(param_colorbar, is_scalar=False)
-            enrg["name_param_colorbar"] = lists_to_ndarray(
-                name_param_colorbar, is_scalar=False)
+            enrg["param_colorbar"] = self.param_colorbar
         if len(self.ticks_colorbar) > 0:
-            enrg["ticks_colorbar"] = lists_to_ndarray(self.ticks_colorbar, is_scalar=True)
-
+            enrg["ticks_colorbar"] = self.ticks_colorbar
         if self.custum_colorbar_colors is not None:
-            enrg["custum_colorbar_colors"] = lists_to_ndarray(self.custum_colorbar_colors,
-                                                              is_scalar=False)
+            enrg["custum_colorbar_colors"] = self.custum_colorbar_colors
         if self.custum_colorbar_values is not None:
-            enrg["custum_colorbar_values"] = lists_to_ndarray(self.custum_colorbar_values, is_scalar=True)
-
+            enrg["custum_colorbar_values"] = self.custum_colorbar_values
         if len(self.param_labels_contours) > 0:
-            param_labels_contours: list = []
-            name_param_labels_contours: list[str] = []
-            for key in self.param_labels_contours.keys():
-                param_labels_contours.append(self.param_labels_contours[key])
-                name_param_labels_contours.append(key)
-            enrg["param_labels_contours"] = np.array(param_labels_contours)
-            enrg["name_param_labels_contours"] = np.array(name_param_labels_contours)
+            enrg["param_labels_contours"] = self.param_labels_contours
         if len(self.param_font) > 0:
-            param_font: list = []
-            name_param_font: list[str] = []
-            for key in self.param_font.keys():
-                param_font.append(self.param_font[key])
-                name_param_font.append(key)
-            enrg["param_font"] = np.array(param_font)
-            enrg["name_param_font"] = np.array(name_param_font)
+            enrg["param_font"] = self.param_font
         if len(self.param_ax) > 0:
-            param_ax: list = []
-            name_param_ax: list[str] = []
-            for key in self.param_ax.keys():
-                param_ax.append(self.param_ax[key])
-                name_param_ax.append(key)
-            enrg["param_ax"] = np.array(param_ax)
-            enrg["name_param_ax"] = np.array(name_param_ax)
+            enrg["param_ax"] = self.param_ax
         if len(self.param_fig) > 0:
-            param_fig: list = []
-            name_param_fig: list[str] = []
-            for key in self.param_fig.keys():
-                param_fig.append(self.param_fig[key])
-                name_param_fig.append(key)
-            enrg["param_fig"] = np.array(param_fig)
-            enrg["name_param_fig"] = np.array(name_param_fig)
+            enrg["param_fig"] = self.param_fig
         if len(self.param_enrg_fig) > 0:
-            param_enrg_fig: list = []
-            name_param_enrg_fig: list[str] = []
-            for key in self.param_enrg_fig.keys():
-                param_enrg_fig.append(self.param_enrg_fig[key])
-                name_param_enrg_fig.append(key)
-            enrg["param_enrg_fig"] = np.array(param_enrg_fig)
-            enrg["name_param_enrg_fig"] = np.array(name_param_enrg_fig)
+            enrg["param_enrg_fig"] = self.param_enrg_fig
         if len(self.x_axe) == 0 or self.x_axe[0] > -np.inf:
             enrg["x_axe"] = self.x_axe
         if len(self.labels_x_ticks) == 0 or self.labels_x_ticks[0] != "empty":
@@ -984,93 +770,42 @@ To go further: display several graphs in one :
         if len(self.labels_y_ticks) == 0 or self.labels_y_ticks[0] != "empty":
             enrg["labels_y_ticks"] = self.labels_y_ticks
         if len(self.lines_x) > 0:
-            enrg["lines_x"] = lists_to_ndarray(self.lines_x, is_scalar=True)
+            enrg["lines_x"] = self.lines_x
         if len(self.lines_y) > 0:
-            enrg["lines_y"] = lists_to_ndarray(self.lines_y, is_scalar=True)
+            enrg["lines_y"] = self.lines_y
         if len(self.lines_t_x) > 0:
-            enrg["lines_t_x"] = lists_to_ndarray(self.lines_t_x, is_scalar=True)
+            enrg["lines_t_x"] = self.lines_t_x
         if len(self.lines_t_y) > 0:
-            enrg["lines_t_y"] = lists_to_ndarray(self.lines_t_y, is_scalar=True)
+            enrg["lines_t_y"] = self.lines_t_y
         if len(self.lines_t_s) > 0:
-            enrg["lines_t_s"] = lists_to_ndarray(self.lines_t_s)
+            enrg["lines_t_s"] = self.lines_t_s
         if len(self.err_y) > 0:
-            enrg["err_y"] = lists_to_ndarray(self.err_y, is_scalar=True)
+            enrg["err_y"] = self.err_y
         if len(self.param_lines) > 0:
-            param_lines: list = []
-            name_param_lines: list[list[str]] = []
-            for i in range(len(self.param_lines)):
-                param_lines.append([]), name_param_lines.append([])
-                for key in self.param_lines[i].keys():
-                    param_lines[i].append(self.param_lines[i][key])
-                    name_param_lines[i].append(key)
-            enrg["param_lines"] = lists_to_ndarray(param_lines, is_scalar=False)
-            enrg["name_param_lines"] = lists_to_ndarray(
-                name_param_lines, is_scalar=False)
+            enrg["param_lines"] = self.param_lines
         if len(self.param_texts) > 0:
-            param_texts: list = []
-            name_param_texts: list[list[str]] = []
-            for i in range(len(self.param_texts)):
-                param_texts.append([]), name_param_texts.append([])
-                for key in self.param_texts[i].keys():
-                    param_texts[i].append(self.param_texts[i][key])
-                    name_param_texts[i].append(key)
-            enrg["param_texts"] = lists_to_ndarray(param_texts, is_scalar=False)
-            enrg["name_param_texts"] = lists_to_ndarray(
-                name_param_texts, is_scalar=False)
+            enrg["param_texts"] = self.param_texts
         if len(self.bords_histogramme) > 0:
-            enrg["bords_histogramme"] = lists_to_ndarray(
-                self.bords_histogramme, is_scalar=True)
+            enrg["bords_histogramme"] = self.bords_histogramme
         if len(self.vals_histogramme) > 0:
-            enrg["vals_histogramme"] = lists_to_ndarray(
-                self.vals_histogramme, is_scalar=True)
+            enrg["vals_histogramme"] = self.vals_histogramme
         if len(self.param_histogrammes) > 0:
-            param_histogrammes: list = []
-            name_param_histogrammes: list[list[str]] = []
-            for i in range(len(self.param_histogrammes)):
-                param_histogrammes.append([])
-                name_param_histogrammes.append([])
-                for key in self.param_histogrammes[i].keys():
-                    param_histogrammes[i].append(
-                        self.param_histogrammes[i][key])
-                    name_param_histogrammes[i].append(key)
-            enrg["param_histogrammes"] = lists_to_ndarray(
-                param_histogrammes, is_scalar=False)
-            enrg["name_param_histogrammes"] = lists_to_ndarray(
-                name_param_histogrammes, is_scalar=False)
+            enrg["param_histogrammes"] = self.param_histogrammes
         if len(self.param_legende) > 0:
-            param_legende: list = []
-            name_param_legende: list[str] = []
-            for key in self.param_legende.keys():
-                param_legende.append(self.param_legende[key])
-                name_param_legende.append(key)
-            enrg["param_legende"] = np.array(param_legende)
-            enrg["name_param_legende"] = np.array(name_param_legende)
+            enrg["param_legende"] = self.param_legende
         if len(self.array_image) > 1:
-            enrg["tableau"] = self.array_image
-            enrg["x_axe_tableau"] = self.x_axe_image
-            enrg["y_axe_tableau"] = self.y_axe_image
-            param_tableau: list = []
-            name_param_tableau: list[str] = []
-            for key in self.param_image.keys():
-                param_tableau.append(self.param_image[key])
-                name_param_tableau.append(key)
-            print(param_tableau, name_param_tableau)
-            enrg["param_tableau"] = np.array(param_tableau)
-            enrg["name_param_tableau"] = np.array(name_param_tableau)
+            enrg["array_image"] = self.array_image
+            enrg["x_axe_image"] = self.x_axe_image
+            enrg["y_axe_image"] = self.y_axe_image
+            enrg["param_image"] = self.param_image
         if len(self.array_contours) > 1:
-            enrg["contours"] = self.array_contours
+            enrg["array_contours"] = self.array_contours
             enrg["x_axe_contours"] = self.x_axe_contours
             enrg["y_axe_contours"] = self.y_axe_contours
         if len(self.color_label_contours) > 0:
             enrg["color_label_contours"] = self.color_label_contours
         if len(self.param_contours) > 0:
-            param_contours: list = []
-            name_param_contours: list[str] = []
-            for key in self.param_contours.keys():
-                param_contours.append(self.param_contours[key])
-                name_param_contours.append(key)
-            enrg["param_contours"] = np.array(param_contours)
-            enrg["name_param_contours"] = np.array(name_param_contours)
+            enrg["param_contours"] = self.param_contours
         if len(self.levels) > 0:
             enrg["levels"] = self.levels
             if len(self.clabels) > 0:
@@ -1081,26 +816,9 @@ To go further: display several graphs in one :
             int(self.tab_contours_is_image)), str(int(self.grid))]
         enrg["parameters"] = param
         if len(self.index_polygons) > 0:
-            ind1: list[float | np.double] = []
-            ind2: list[float | np.double] = []
-            for liste in self.index_polygons:
-                ind1.append(liste.T[0])
-            for liste in self.index_polygons:
-                ind2.append(liste.T[1])
-            enrg["index_polygons_1"] = lists_to_ndarray(ind1, is_scalar=True)
-            enrg["index_polygons_2"] = lists_to_ndarray(ind2, is_scalar=True)
-            param_polygons: list = []
-            name_param_polygons: list[list[str]] = []
-            for i in range(len(self.param_polygons)):
-                param_polygons.append([])
-                name_param_polygons.append([])
-                for key in self.param_polygons[i].keys():
-                    param_polygons[i].append(self.param_polygons[i][key])
-                    name_param_polygons[i].append(key)
-            enrg["param_polygons"] = lists_to_ndarray(
-                param_polygons, is_scalar=False)
-            enrg["name_param_polygons"] = lists_to_ndarray(
-                name_param_polygons, is_scalar=False)
+            enrg["index_polygons"] = self.index_polygons
+            enrg["param_polygons"] = self.param_polygons
+        enrg = dict_to_ndarray_dict(enrg, separator="-.-")
         if ".npz" not in self.filename:
             if self.directory[-1] == "/":
                 np.savez_compressed(self.directory +
