@@ -26,46 +26,46 @@ Ensuite la bibliothèque peut être utilisée comme n'importe quelle autre :
 ## Usage
 
 ### Pour initialiser un graphique :
-- Pour un nouveau graphique vierge: `g=graphique()`
+- Pour un nouveau graphique vierge: `g=Graphique()`
 - Pour un ajouter directement du contenu au graphique (et l'afficher immédiatement):
-	- `graph=g.ligne(x,y,marker="",**args)` équivalent à `plt.plot(x,y,marker="",**args);plt.show()` mais on peut récupérer le graphique
-	- `graph=g.incertitudes(x,y,marker="",**args)` équivalent à `plt.plot(x,y,marker="",**args);plt.show()` mais on peut récupérer le graphique
+	- `graph=g.line(x,y,marker="",**args)` équivalent à `plt.plot(x,y,marker="",**args);plt.show()` mais on peut récupérer le graphique
+	- `graph=g.errorbar(x,y, err_y, marker="",**args)` équivalent à `plt.errorbar(x,y, err_y, marker="",**args);plt.show()` mais on peut récupérer le graphique
 
 - Pour ouvrir un graphique de nom `n` dans le repertoire `f`
 (`n` et `f` deux chaines de caractère, par défaut `f` est le répertoire courant)
 ex :
 	`f="../Images/Graphiques"` et n=`"test_graphique"`
 (l'extension.npz n'est pas obligatoire) :
-	- `g=graphique(n)` si n est dans le repertoire courant
-	- `g=graphique(n,f)` sinon
+	- `g=Graphique(n)` si n est dans le repertoire courant
+	- `g=Graphique(n,f)` sinon
 		
 ### Pour enregistrer un graphique :
 - Attribuer un nom au graphique, sans mettre d'extension :
-	`g.nom_fichier="nouveau_nom"`
+	`gr.filename="nouveau_nom"`
 	Par défaut le nom est graphique_sans_nom. Si on souhaite enregistrer plusieurs graphiques dans le même dossier il est donc important de leur donner un nom (non automatique)
 - Éventuellement attribuer un répertoire d'enregistrement :
-	`g.emplacement="nouveau_repertoire"` Par défaut l'emplacement est celui du repertoire courant
+	`gr.directory="nouveau_repertoire"` Par défaut l'emplacement est celui du repertoire courant
 - Pour enregistrer l'objet :
-	`g.enregistrement()`
+	`gr.save()`
 - Pour enregistrer la figure :
 	- Attribuer si nécessaire une extension (par défaut l'extension est svg). Les extensions possibles sont celles disponibles via la bibliothèque matplotlib : 'png', 'pdf', 'svg'...
 
 	```
-	g.ext=".nouvelle_extension"
-	g.enregistrement_figure()
+	gr.ext=".nouvelle_extension"
+	gr.save_figure()
 	```
 	
 ### Pour afficher le graphique :
-```g.affichage_figure()```
+```gr.show()```
 	
 ### Pour ajouter une ligne de point (equivalent à plt.plot) :
-```g.ajout_ligne(x,y,**args```
+```gr.line(x,y,**args)```
 avec `x` et `y` deux listes, tableaux de données à affichées et
 `**args` correspond à tous les autres arguments possibles de plot()
 Peut être répété autant de fois que nécessaire
 	
 ### Pour ajouter un histogramme :
-`g.ajout_histogramme(valeurs,poids=[],normalisation=True,statistic='sum', bins=10, range=None,**args)` 
+`g.histogram(valeurs,poids=[],normalisation=True,statistic='sum', bins=10, range=None,**args)` 
 
 où :
 - `valeurs` est le tableau, la liste des valeurs à classer
@@ -76,20 +76,20 @@ où :
 Peut être répété autant de fois que nécessaire
 	
 ### Pour ajouter une image :
-`g.ajout_image(tableau,axe_x,axe_y,**args)`
+`g.image(tableau,axe_x,axe_y,**args)`
 où :
 - `tableau` représente l'image à afficher
 - `axe_x` et `axe_y` donne les graduations des axes de l'image
 - `**args` tous les autres arguments possibles pour l'affichage d'une image
 
 ### Pour ajouter des contours :
-`g.ajout_contours(self,contours=np.array([[]]),axe_x=None,axe_y=None,**args) `
+`g.contours(self,contours=np.array([[]]),axe_x=None,axe_y=None,**args) `
 
 - `**args` donnes les arguments possibles pour plt.contours()
 - Pour ajouter des lignes de niveau à une image, completer `**args` en laissant les autres arguments par défaut
 
 ### Pour ajouter un polygone (surface colorée délimitée par une liste de points) : 
-`g.ajout_polygone(ind,alpha=0.7, facecolor='C3',**args)`
+`g.polygon(ind,alpha=0.7, facecolor='C3',**args)`
 avec `ind` un tableau/liste de dimension (n,2) où `n` est les nombres de point : `ind[:,0]` correspond aux abscisses des points et `ind[:1]` aux ordonnées
 
 Peut être répété autant de fois que nécessaire
@@ -102,7 +102,7 @@ La structure ne permet pas un enregistrement d'un tel montage, pour cela il faut
 chacunes de ces sous figures peut être associée à un graphique `gi` :
 	`gi.ax=axi;gi.figure=fig`
 - Pour l'affichage il faut appeler pour chaque graphique gi :
-`gi.projection_figure()` à la place de `g.affichage_figure()`
+`gi.plot()` à la place de `g.show()`
 puis appeler les fonctions `plt.show()` ou `plt.save`
 
 ## Support
