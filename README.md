@@ -1,9 +1,8 @@
-## Graphiques
-
+## Graphix
+![Logo graphix](logo.png "Graphix")
 ## Description
-Permet de sauvegarder un graphique matplotlib dans un objet dédié pour le réutiliser en l'état plus tard.
-
-Ne fonctionne que pour une seule figure à la fois pour le moment.
+Allows you to save a matplotlib graph in a dedicated object so that you can reuse it as is later.
+Only works for one plot at a time at the moment.
 
 ## Badges
 
@@ -11,99 +10,113 @@ Ne fonctionne que pour une seule figure à la fois pour le moment.
 
 ## Installation
 
-Dans le dossier principal, lancer la commande :
+To compile the library :
+
+In the main folder, run the command :
 
 `python setup.py bdist_wheel`
 
-Le fichier wheel d'installation est dans le dossier "dist" nouvellement créé.
-Pour installer la librairie dans l'environnement local:
+The installation wheel file is in the newly created ‘dist’ folder.
+To install the library in the local environment:
 
 `pip install /path/to/wheelfile.whl`
 
-Ensuite la bibliothèque peut être utilisée comme n'importe quelle autre :
-`import graphiques as g`
+Then the library can be used like any other:
+`import graphique as g`
 
 ## Usage
 
-### Pour initialiser un graphique :
-- Pour un nouveau graphique vierge: `g=Graphique()`
-- Pour un ajouter directement du contenu au graphique (et l'afficher immédiatement):
-	- `graph=g.line(x,y,marker="",**args)` équivalent à `plt.plot(x,y,marker="",**args);plt.show()` mais on peut récupérer le graphique
-	- `graph=g.errorbar(x,y, err_y, marker="",**args)` équivalent à `plt.errorbar(x,y, err_y, marker="",**args);plt.show()` mais on peut récupérer le graphique
+### To initialise a graph :
 
-- Pour ouvrir un graphique de nom `n` dans le repertoire `f`
-(`n` et `f` deux chaines de caractère, par défaut `f` est le répertoire courant)
-ex :
-	`f="../Images/Graphiques"` et n=`"test_graphique"`
-(l'extension.npz n'est pas obligatoire) :
-	- `g=Graphique(n)` si n est dans le repertoire courant
-	- `g=Graphique(n,f)` sinon
-		
-### Pour enregistrer un graphique :
-- Attribuer un nom au graphique, sans mettre d'extension :
-	`gr.filename="nouveau_nom"`
-	Par défaut le nom est graphique_sans_nom. Si on souhaite enregistrer plusieurs graphiques dans le même dossier il est donc important de leur donner un nom (non automatique)
-- Éventuellement attribuer un répertoire d'enregistrement :
-	`gr.directory="nouveau_repertoire"` Par défaut l'emplacement est celui du repertoire courant
-- Pour enregistrer l'objet :
+- For a new blank graph: `g=Graphique()`.
+
+- To add content directly to the graph (and display it immediately):
+	- `graph=g.line(x,y,marker=‘’,**args)` equivalent to `plt.plot(x,y,marker=‘’,**args);plt.show()` but you can recover the graph
+	- `graph=g.errorbar(x,y, err_y, marker=‘’,**args)` equivalent to `plt.errorbar(x,y, err_y, marker=‘’,**args);plt.show()` but the graph can be retrieved.
+
+- To open a graph with the name `n` in the `f` directory
+(`n` and `f` are two strings, by default `f` is the current directory)
+eg:
+	`f=‘../Images/Graphique’` and n=`‘test_graphique’`.
+(the .npz extension is not mandatory) :
+	- `g=Graphique(n)` if n is in the current directory
+	- `g=Graphique(n,f)` otherwise
+
+### To save a chart :
+- Assign a name to the graph, without using an extension:
+	`gr.filename=‘new_name’`
+	The default name is graph_without_name.
+    If you want to save several graphs in the same folder, it is important to give them a name (not automatic).
+
+
+- Possibly assign a directory for saving:
+	`gr.directory=‘new_directory’` By default, the location is the current directory.
+
+- To save the object:
 	`gr.save()`
-- Pour enregistrer la figure :
-	- Attribuer si nécessaire une extension (par défaut l'extension est svg). Les extensions possibles sont celles disponibles via la bibliothèque matplotlib : 'png', 'pdf', 'svg'...
-
+- To save the figure :
+	- Assign an extension if necessary (by default the extension is svg). Possible extensions are those available via the matplotlib library: ‘png’, ‘pdf’, ‘svg’, etc.
 	```
-	gr.ext=".nouvelle_extension"
+	gr.ext=’.new_extension
 	gr.save_figure()
 	```
-	
-### Pour afficher le graphique :
+
+### To display the Graphique :
 ```gr.show()```
-	
-### Pour ajouter une ligne de point (equivalent à plt.plot) :
-```gr.line(x,y,**args)```
-avec `x` et `y` deux listes, tableaux de données à affichées et
-`**args` correspond à tous les autres arguments possibles de plot()
-Peut être répété autant de fois que nécessaire
-	
-### Pour ajouter un histogramme :
-`g.histogram(valeurs,poids=[],normalisation=True,statistic='sum', bins=10, range=None,**args)` 
 
-où :
-- `valeurs` est le tableau, la liste des valeurs à classer
-- `poids` est une liste donnant éventuellement un poids pour chaque valeur
-- `normalisation` indique si l'histogramme doit être normalisé ou non
-- Les autres arguments sont les mêmes que `plt.hist()`
+### To add a line of points (equivalent to plt.plot):
 
-Peut être répété autant de fois que nécessaire
+``gr.line(x,y,**args)```
+where `x` and `y` are two lists or arrays of data to be displayed and
+`**args` corresponds to all the other possible arguments to plot()
+
+Can be repeated as many times as necessary
+
+### To add a histogram :
+
+`g.histogram(values,weight=[],normalisation=True,statistic=‘sum’, bins=10, range=None,**args)` 
+
+where :
+- `values` is the array, the list of values to be classified
+- `weight` is a list giving a possible weight for each value
+- `normalisation` indicates whether or not the histogram should be normalised
+- The other arguments are the same as `plt.hist()`.
+Can be repeated as many times as necessary
 	
-### Pour ajouter une image :
-`g.image(tableau,axe_x,axe_y,**args)`
-où :
-- `tableau` représente l'image à afficher
-- `axe_x` et `axe_y` donne les graduations des axes de l'image
-- `**args` tous les autres arguments possibles pour l'affichage d'une image
 
-### Pour ajouter des contours :
+### To add an image:
+
+`g.image(array,x-axis,y-axis,**args)`
+where :
+- `array` represents the image to be displayed
+- `axis_x` and `axis_y` give the graduations of the image axes
+- `**args` all the other possible arguments for displaying an image
+
+
+
+### To add contours:
 `g.contours(self,contours=np.array([[]]),axe_x=None,axe_y=None,**args) `
+- `**args` gives the possible arguments for plt.contours()
+- To add level lines to an image, complete `**args`, leaving the other arguments as defaults
 
-- `**args` donnes les arguments possibles pour plt.contours()
-- Pour ajouter des lignes de niveau à une image, completer `**args` en laissant les autres arguments par défaut
 
-### Pour ajouter un polygone (surface colorée délimitée par une liste de points) : 
-`g.polygon(ind,alpha=0.7, facecolor='C3',**args)`
-avec `ind` un tableau/liste de dimension (n,2) où `n` est les nombres de point : `ind[:,0]` correspond aux abscisses des points et `ind[:1]` aux ordonnées
 
-Peut être répété autant de fois que nécessaire
+### To add a polygon (coloured area delimited by a list of points): 
 
-### Pour aller plus loins : affichage de plusieurs graphiques en un :
+`g.polygon(ind,alpha=0.7, facecolor=‘C3’,**args)`
+with `ind` an array/list of dimension (n,2) where `n` is the number of points: `ind[:,0]` corresponds to the abscissae of the points and `ind[:1]` to the ordinates.
+Can be repeated as many times as necessary
 
-La structure ne permet pas un enregistrement d'un tel montage, pour cela il faut :
-- Initialiser une figure (`plt.figure`...)
-- Définir une liste de sous figures (`fig,axs=plt.subplot`...)
-chacunes de ces sous figures peut être associée à un graphique `gi` :
-	`gi.ax=axi;gi.figure=fig`
-- Pour l'affichage il faut appeler pour chaque graphique gi :
-`gi.plot()` à la place de `g.show()`
-puis appeler les fonctions `plt.show()` ou `plt.save`
+### To go further: display several graphics in one :
+
+The structure does not allow such a set-up to be saved, so you need to :
+- Initialise a figure (`plt.figure`...)
+- Define a list of sub-figures (`fig,axs=plt.subplot`...)
+each of these sub-figures can be associated with a `gi` graph:
+	`gi.ax=axi;gi.figure=fig`.
+- To display each graph, call gi :
+`gi.plot()` instead of `g.show()`.
+then call the functions `plt.show()` or `plt.save`.
 
 ## Support
 
