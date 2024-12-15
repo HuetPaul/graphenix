@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+illuspy/__init__.py
+illuspy/gui.py
+illuspy/objet.py
+illuspy.egg-info/PKG-INFO
+illuspy.egg-info/SOURCES.txt
+illuspy.egg-info/dependency_links.txt
+illuspy.egg-info/top_level.txt

@@ -3,6 +3,6 @@
 from __future__ import annotations
 
 #from unittest.mock import right
-from graphix.objet import *
-from graphix.gui import plot
+from illuspy.objet import *
+from illuspy.gui import plot
 

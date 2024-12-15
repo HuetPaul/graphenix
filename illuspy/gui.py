@@ -8,7 +8,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
-from graphix.objet import *
+from illuspy.objet import *
 
 
 class PersoNavBar(NavigationToolbar2QT):
