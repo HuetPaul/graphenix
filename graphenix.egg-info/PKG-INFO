@@ -1,0 +1,6 @@
+Metadata-Version: 2.1
+Name: graphenix
+Version: 0.2.0
+Summary: A library to store and replot matplotlib plot easly and reproducibly
+Author: Paul Huet
+License-File: LICENSE

@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+graphenix/__init__.py
+graphenix/gui.py
+graphenix/objet.py
+graphenix.egg-info/PKG-INFO
+graphenix.egg-info/SOURCES.txt
+graphenix.egg-info/dependency_links.txt
+graphenix.egg-info/top_level.txt
