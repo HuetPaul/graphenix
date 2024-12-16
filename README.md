@@ -1,5 +1,5 @@
-## Illuspy
-![Logo illuspy](logo.png "Illuspy")
+# Graphenix
+![Logo graphenix](logo.png "Graphenix")
 ## Description
 Allows you to save a matplotlib graph in a dedicated object so that you can reuse it as is later.
 Only works for one plot at a time at the moment.
