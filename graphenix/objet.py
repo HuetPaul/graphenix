@@ -118,6 +118,8 @@ def test_list_regular(x: list) -> list | None:
             res.append("float")
         elif isinstance(X, int):
             res.append("int")
+        elif isinstance(X, tuple):
+            res.append("tuple")
         elif isinstance(X, np.ndarray):
             res.append("array")
         elif isinstance(X, list):
@@ -154,6 +156,8 @@ def get_regular_list(x: np.ndarray | list, types: np.ndarray) -> list:
             res.append(float(X))
         elif T == "int":
             res.append(int(X))
+        elif T == "tuple":
+            res.append(tuple(X))
         elif T == "array":
             res.append(X)
         else:
@@ -184,6 +188,9 @@ def list_to_dict(x: list, separator: str = "-.-") -> dict:
         elif isinstance(x[i], int):
             res[str(i)] = x[i]
             types.append([str(i), "int"])
+        elif isinstance(x[i], tuple):
+            res[str(i)] = x[i]
+            types.append([str(i), tuple])
         elif isinstance(x[i], np.ndarray):
             res[str(i)] = x[i]
             types.append([str(i), "array"])
@@ -247,6 +254,10 @@ def dict_to_ndarray_dict(dic: dict, separator: str = "-.-") -> dict:
         elif isinstance(dic[k], float):
             res[k] = dic[k]
             types.append([k, "float"])
+            keys.append(k)
+        elif isinstance(dic[k], tuple):
+            res[k] = dic[k]
+            types.append([k, "tuple"])
             keys.append(k)
         elif isinstance(dic[k], np.ndarray):
             res[k] = dic[k]
@@ -334,6 +345,9 @@ def dict_to_list(dic: dict) -> list:
         elif type_i == "int":
             res.append(int(dic[k]))
             i += 1
+        elif type_i == "tuple":
+            res.append(tuple(dic[k]))
+            i += 1
         elif type_i == "array":
             res.append(np.array(dic[k]))
             i += 1
@@ -396,6 +410,9 @@ def ndarray_dict_to_dict(dic: dict) -> dict:
                 i += 1
             elif type_i == "int":
                 res[k] = int(dic[k])
+                i += 1
+            elif type_i == "tuple":
+                res[k] = tuple(dic[k])
                 i += 1
             elif type_i == "array":
                 res[k] = np.array(dic[k])
@@ -480,6 +497,7 @@ def colored_line(x, y, c, ax, **lc_kwargs):
     # lc.set_array(c)  # set the colors of each segment
 
     return ax.add_collection(lc)
+
 
 # noinspection PyTypeChecker
 class Graphique:

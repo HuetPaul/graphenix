@@ -738,7 +738,7 @@ To go further: display several graphs in one :
                 self.param_histogrammes = values_to_load["param_histogrammes"]
             if "param_legende" in values_to_load.keys():
                 self.param_legende = values_to_load["param_legende"]
-            if "image" in values_to_load.keys():
+            if "array_image" in values_to_load.keys():
                 self.array_image = values_to_load["array_image"]
                 self.param_image = values_to_load["param_image"]
                 self.x_axe_image = values_to_load["x_axe_image"]
@@ -3608,8 +3608,8 @@ function : a user-defined function which takes a 1D array of values, and outputs
                 else:
                     self.axes.append(self.ax)
             param_tableau: dict = self.param_image.copy()
-            if ("scale" in self.param_colorbar.keys()
-                    and self.param_colorbar["scale"] == "log"):
+            if ("scale" in self.param_colorbar[0].keys()
+                    and self.param_colorbar[0]["scale"] == "log"):
                 if "vmin" in param_tableau.keys():
                     vmin = param_tableau["vmin"]
                     del param_tableau["vmin"]
@@ -4393,7 +4393,8 @@ def image(array_image: np.ndarray,
 def level_surface(x: np.ndarray | list, y: np.ndarray | list,
                   vals: np.ndarray | list, npix_x: int = 400, npix_y: int = 400,
                   logx: bool = False, logy: bool = False,
-                  method: str = 'cubic', log_vals: bool = False, **args) -> Graphique:
+                  method: str = 'cubic', log_vals: bool = False, show: bool=True,
+                  **args) -> Graphique:
     """
     Returns an image representing the 2d contour line associated with the points
     points defined by x, y, vals
@@ -4412,6 +4413,7 @@ def level_surface(x: np.ndarray | list, y: np.ndarray | list,
     on a logarithmic scale
     method: str: interplotation method: 'nearest', 'linear' where by default
     cubic'. See doc scipy.interpolate.griddata
+    show: bool: To show the graphique (default=True)
     args: dict: dictionaries of complementary arguments to images
     """
     points: np.ndarray = np.array([x, y]).T
@@ -4432,7 +4434,9 @@ def level_surface(x: np.ndarray | list, y: np.ndarray | list,
     else:
         tab: np.ndarray = griddata(points, vals, xi=(xi_x, xi_y), method=method)
 
-    res: Graphique = image(tab, x_int, y_int, shading='nearest',
+    res: Graphique = image(tab, x_int, y_int, shading='nearest', show=False,
                            **args)
     res.config_colorbar(scale="log")
+    if show:
+        res.show()
     return res

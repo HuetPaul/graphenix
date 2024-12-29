@@ -3,6 +3,7 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT
 
 matplotlib.use('Qt5Agg')
 import sys
+import os
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
@@ -31,7 +32,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, graph: Graphique, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        scriptDir = os.path.dirname(os.path.realpath(__file__))
+        self.setWindowIcon(QtGui.QIcon(scriptDir + os.path.sep + 'icone_graphenix.png'))
         graph.plot()
         sc = MplCanvas(graph)
         # Create toolbar, passing canvas as first parament, parent (self, the MainWindow) as second.
